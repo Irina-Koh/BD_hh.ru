@@ -30,6 +30,7 @@ ENV/
 nosetests.xml
 coverage.xml
 *.cover
+database.ini
 
 # Jupyter Notebook
 .ipynb_checkpoints
