@@ -1,21 +1,18 @@
 from src.db_manager import DBManager
-from src.utils import get_companies, create_database, get_vacancies, create_tables, insert_employer, insert_vacancy
-from config import config
+from src.utils import get_companies_info, create_database
+from config import get_config
 
 
 def main():
 
-    params = config()
+    params = get_config()
 
     db_manager = DBManager(**params)
     companies = ['Яндекс', 'Сбербанк', 'VK', 'Газпром Нефть', 'Роснефть', 'Ростелеком', 'Mail.Ru Group', 'Wildberries',
                  'Аэрофлот', 'Rambler&Co']
-    get_companies(companies)
+    get_companies_info(companies)
     create_database('Companies_vacancy', params)
-    get_vacancies(companies)
-    create_tables()
-    insert_employer()
-    insert_vacancy()
+
 
     while True:
         print('Добро пожаловать в систему вакансий!\n')

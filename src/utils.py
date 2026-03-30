@@ -1,159 +1,122 @@
 import os
 from typing import List, Dict, Any
-from config import config
+from config import get_config
 import psycopg2
 import requests
 
-param = config()
+param = get_config()
 
-def get_companies(companies: list[str]) -> List[Dict[str, Any]]:
-    '''
-    Получение списка всех компаний
-    :return: список компаний или пустой список
-    '''
-    for company_name in companies:
-    # Отправляем запрос к API
-        response = requests.get(f"https://api.hh.ru/employers?text={company_name}&per_page=1")
+company_names = ['Почта России', 'Сбербанк', 'VK', 'Газпром Нефть', 'Роснефть', 'Ростелеком', 'Mail.Ru Group', 'Wildberries',
+                   'Аэрофлот', 'Rambler&Co']
 
-        if response.status_code == 200:
-            data = response.json()
-            items = data.get('items', [])
+def get_companies_info(company_names: List[str]) -> List[Dict[str, Any]]:
+    data = []
+    for company_name in company_names:
+        # Поиск компании по названию
+        search_response = requests.get(f"https://api.hh.ru/employers?text={company_name}&per_page=1")
+        if search_response.status_code != 200:
+            continue  # Пропускаем, если не удалось получить данные
 
-            if len(items) > 0:
-                employer_data = items[0]
-                print(f"Получены данные о работодателе: {employer_data['name']}")
-            else:
-                print(f"Работодатель '{company_name}' не найден.")
-                return []
-        else:
-            print(f"Ошибка при запросе данных о работодателе: статус {response.status_code}.")
-            return []
+        search_data = search_response.json()
+        items = search_data.get('items', [])
+        if not items:
+            continue  # Пропускаем, если компания не найдена
+        print(items)
+        company_id = items[0]['id']
+        vacancies_response = requests.get(f"https://api.hh.ru/vacancies?employer_id={company_id}&per_page=1")
+        if vacancies_response.status_code == 200:
+            vacancies_data = vacancies_response.json()
+            print(vacancies_data)
+            vacancies = vacancies_data.get('items', [])
+            print(vacancies)
+
+
+            data.append({
+                'company': {
+                'id': company_id,
+                'name': company_name
+                },
+                'vacancies': vacancies
+                })
+
+
+    return data
 
 def create_database(database_name: str, params: dict) -> None:
-        '''Создание базы данных и таблиц для сохранения данных о компаниях и вакансиях'''
-
-    try:
-        # Подключаемся к PostgreSQL
-        conn = psycopg2.connect()
-
-        # Используем отдельный курсор для выполнения запросов
-        with conn.cursor() as cur:
-
-            # Устанавливаем autocommit режим для команды CREATE DATABASE
-            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-
-            # Проверка наличия существующей базы данных
-            cur.execute("SELECT 1 FROM pg_database WHERE datname=%s", (os.getenv('DB_NAME'),))
-            exists = bool(cur.fetchone())
-
-            if not exists:
-                # Создаем базу данных, если её ещё нет
-                cur.execute(f"CREATE DATABASE {os.getenv('DB_NAME')}")
-                print(f"База данных {os.getenv('DB_NAME')} успешно создана.")
-            else:
-                print(f"База данных {os.getenv('DB_NAME')} уже существует.")
-
-            # Возвращаем нормальный режим изоляции
-            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_READ_COMMITTED)
-
-    except Exception as e:
-        print("Ошибка:", str(e))
-    finally:
-        if 'conn' in locals():
-            conn.close()
-
-
-def get_vacancies(companies:list[str]) -> List[Dict[str, Any]]:
-    '''
-    Получение списка вакансий компании по ID
-    :return: список вакансий
-    '''
-    for company_name in companies:
-        vacancies_response = requests.get(f"https://api.hh.ru/vacancies?text={company_name}")
-        if vacancies_response.status_code == 200:
-            vacancies = vacancies_response.json()['items']
-            if len(vacancies) > 0:
-                print(f"Получено {len(vacancies)} вакансий {company_name}.")
-            else:
-                print(f"Вакансий {company_name} не найдено.")
-                return []
-        if vacancies_response.status_code != 200:
-            print(f"Ошибка при запросе данных о вакансиях")
-            return []
-
-def create_tables():
-    '''Создает таблицы в базе данных'''
-    try:
-        conn = psycopg2.connect()
-        with conn.cursor() as cur:
-            # Таблица работодателей
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS employers (
-                    employer_id SERIAL PRIMARY KEY,
-                    company_name TEXT NOT NULL UNIQUE,
-                    industry TEXT,
-                    website TEXT,
-                    description TEXT
+    '''Создание базы данных и таблиц для сохранения данных о компаниях и вакансиях'''
+    conn = psycopg2.connect(dbname='postgres', **params)
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute(f'DROP DATABASE {database_name}')
+    cur.execute(f'CREATE DATABASE {database_name}')
+    cur.close()
+    conn.close()
+    conn = psycopg2.connect(dbname=database_name, **params)
+    with conn.cursor() as cur:
+        # Таблица компаний
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS employers (
+                employer_id SERIAL PRIMARY KEY,
+                company_name TEXT NOT NULL UNIQUE,
+                vacancy_list LIST, 
                 );
-            ''')
+        ''')
 
-            # Таблица вакансий
-            cur.execute('''
-                CREATE TABLE IF NOT EXISTS vacancies (
-                    vacancy_id SERIAL PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    salary_from FLOAT,
-                    salary_to FLOAT,
-                    currency TEXT,
-                    area TEXT,
-                    experience_required BOOLEAN,
-                    created_at TIMESTAMPTZ,
-                    employer_id INT REFERENCES employers(employer_id)
-                );
-            ''')
-        conn.commit()
-    except Exception as e:
-        print("Ошибка при создании таблиц:", str(e))
-    finally:
-        if 'conn' in locals():
-            conn.close()
+        # Таблица вакансий
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS vacancies (
+                vacancy_id SERIAL PRIMARY KEY,
+                company_name TEXT NOT NULL,
+                title TEXT NOT NULL,
+                salary_from FLOAT,
+                salary_to FLOAT,
+                currency TEXT,
+                link_vacancy TEXT,
+                employer_id INT REFERENCES employers(employer_id)
+            );
+        ''')
+    conn.commit()
+    conn.close()
 
 
-def insert_employer(cursor, data):
-    """Вставляет запись о работодателе"""
-    try:
-        cursor.execute(
-            """
-            INSERT INTO employers(company_name, description, website)
-            VALUES (%s, %s, %s)
-            ON CONFLICT DO NOTHING;
-            """,
-            (data['name'], data.get('description', '')[:100], data.get('website'))
-        )
-    except Exception as e:
-        print(f"Ошибка при вставке работодателя: {e}")
-
-
-def insert_vacancy(cursor, vacancy, employer_id):
-    """Вставляет запись о вакансии"""
-    try:
-        cursor.execute(
-            """
-            INSERT INTO vacancies(title, salary_from, salary_to, currency, area, experience_required, created_at, employer_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT DO NOTHING;
-            """,
-            (
-                vacancy['name'],
-                vacancy.get('salary', {}).get('from'),
-                vacancy.get('salary', {}).get('to'),
-                vacancy.get('salary', {}).get('currency'),
-                vacancy.get('area', {}).get('name'),
-                vacancy.get('experience', {}).get('id') != 'noExperience',
-                vacancy.get('created_at'),
-                employer_id
+def save_data_to_database(data: list[dict[str, Any]], database_name: str, params: dict) -> None:
+    """Сохранение данных о компаниях и вакансиях в базу данных"""
+    conn = psycopg2.connect(dbname=database_name, **params)
+    with conn.cursor() as cur:
+        for company in data:
+            company_id = company['company']['id']
+            company_name = company['company']['name']
+            vacancy_list = company['vacancy']
+            cur.execute(
+                """
+                INSERT INTO employers(company_id, company_name, vacancy_list)
+                VALUES (%s, %s, %s)
+                RETURNING employer_id
+                """,
+                (company_id, company_name, vacancy_list)
             )
-        )
-    except Exception as e:
-        print(f"Ошибка при вставке вакансии: {e}")
+            for vacancy in vacancy_list:
+                vacansy_name = vacancy['name']
+                vacansy_salary_from = vacancy['salary']['from']
+                vacansy_salary_to = vacancy['salary']['to']
+                vacansy_salary_currency = vacancy['salary']['currency']
+                url_vacancy = vacancy['alternate_url']
 
+            cur.execute(
+                """
+                INSERT INTO vacancies(vacancy_id, company_name, title, salary_from, salary_to, currency, link_vacancy, employer_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s
+                """,
+                (
+                    company_name,
+                    vacansy_name,
+                    vacansy_salary_from,
+                    vacansy_salary_to,
+                    vacansy_salary_currency,
+                    url_vacancy,
+                    company_id
+                )
+            )
+
+    conn.commit()
+    conn.close()

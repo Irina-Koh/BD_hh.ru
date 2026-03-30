@@ -5,6 +5,7 @@ description = ""
 authors = [
     {name = "Irina Koh",email = "arina2009.91@mail.ru"}
 ]
+package-mode = "none"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
