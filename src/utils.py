@@ -43,7 +43,9 @@ def get_companies_info(company_names: List[str]) -> List[Dict[str, Any]]:
     return data
 
 def create_database(database_name: str, params: dict) -> None:
-    '''Создание базы данных и таблиц для сохранения данных о компаниях и вакансиях'''
+    """
+    Создание базы данных и таблиц для сохранения данных о компаниях и вакансиях
+    """
     conn = psycopg2.connect(dbname='postgres', **params)
     conn.autocommit = True
     cur = conn.cursor()

@@ -34,4 +34,6 @@ database.ini
 
 # Jupyter Notebook
 .ipynb_checkpoints
-/config.py
+config.py
+.evn
+.idea

@@ -3,15 +3,18 @@ from src.utils import get_companies_info, create_database
 from config import get_config
 
 
+
 def main():
 
     params = get_config()
+
+    create_database('Companies_vacancy', params)
 
     db_manager = DBManager(**params)
     companies = ['Яндекс', 'Сбербанк', 'VK', 'Газпром Нефть', 'Роснефть', 'Ростелеком', 'Mail.Ru Group', 'Wildberries',
                  'Аэрофлот', 'Rambler&Co']
     get_companies_info(companies)
-    create_database('Companies_vacancy', params)
+
 
 
     while True:

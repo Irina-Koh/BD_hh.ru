@@ -1,6 +1,5 @@
 from typing import List, Tuple
 import psycopg2
-from typing import Optional
 
 
 class DBManager:
@@ -15,12 +14,12 @@ class DBManager:
             user=user,
             password=password,
             host=host,
-            port=port
+            port=port,
+            options='-c client_encoding=UTF8'
         )
 
         self.cur = self.conn.cursor()
         print("Соединение успешно установлено.")
-        self.create_table()
 
     def get_companies_and_vacancies_count(self) -> List[Tuple]:
         """Возвращает список всех компаний и количество вакансий у каждой компании."""
