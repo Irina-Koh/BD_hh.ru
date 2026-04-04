@@ -1,5 +1,0 @@
-DB_NAME=DB_hh_ru
-DB_USER=postgres
-DB_HOST=localhost
-DB_PASSWORD=26121991
-DB_PORT=5432
