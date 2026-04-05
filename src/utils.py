@@ -46,21 +46,19 @@ def create_database(database_name: str, params: dict) -> None:
     """
     Создание базы данных и таблиц для сохранения данных о компаниях и вакансиях
     """
-    conn = psycopg2.connect(dbname='postgres', **params)
+    conn = psycopg2.connect(**params)
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute(f'DROP DATABASE {database_name}')
+    cur.execute(f"DROP DATABASE IF EXISTS {database_name}")
     cur.execute(f'CREATE DATABASE {database_name}')
     cur.close()
     conn.close()
-    conn = psycopg2.connect(dbname=database_name, **params)
+    conn = psycopg2.connect(**params)
     with conn.cursor() as cur:
         # Таблица компаний
         cur.execute('''
             CREATE TABLE IF NOT EXISTS employers (
                 employer_id SERIAL PRIMARY KEY,
-                company_name TEXT NOT NULL UNIQUE,
-                vacancy_list LIST, 
                 );
         ''')
 
@@ -83,7 +81,7 @@ def create_database(database_name: str, params: dict) -> None:
 
 def save_data_to_database(data: list[dict[str, Any]], database_name: str, params: dict) -> None:
     """Сохранение данных о компаниях и вакансиях в базу данных"""
-    conn = psycopg2.connect(dbname=database_name, **params)
+    conn = psycopg2.connect(**params)
     with conn.cursor() as cur:
         for company in data:
             company_id = company['company']['id']

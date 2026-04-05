@@ -3,12 +3,10 @@ import psycopg2
 
 
 class DBManager:
-    def __init__(self, database: str, user: str, password: str, host: str, port: int = 5432,
-                 table_name: str = 'company_and_vacancy'):
+    def __init__(self, database: str, user: str, password: str, host: str, port: int = 5432):
         """
         Конструктор класса для управления соединением с БД.
         """
-        self.table_name = table_name
         self.conn = psycopg2.connect(
             dbname=database,
             user=user,

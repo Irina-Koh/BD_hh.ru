@@ -1,5 +1,5 @@
 from src.db_manager import DBManager
-from src.utils import get_companies_info, create_database
+from src.utils import get_companies_info, create_database, save_data_to_database
 from config import get_config
 
 
@@ -8,12 +8,14 @@ def main():
 
     params = get_config()
 
-    create_database('Companies_vacancy', params)
+    create_database('companies_vacancy', **params)
 
-    db_manager = DBManager(**params)
+    db_manager = DBManager(database="companies_vacancy", **params)
     companies = ['Яндекс', 'Сбербанк', 'VK', 'Газпром Нефть', 'Роснефть', 'Ростелеком', 'Mail.Ru Group', 'Wildberries',
                  'Аэрофлот', 'Rambler&Co']
-    get_companies_info(companies)
+    data = get_companies_info(companies)
+    save_data_to_database(data, **params)
+
 
 
 
