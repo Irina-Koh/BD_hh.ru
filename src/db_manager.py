@@ -1,67 +1,63 @@
-from typing import List, Tuple
+
 import psycopg2
+
+from config import config
 
 
 class DBManager:
-    def __init__(self, database: str, user: str, password: str, host: str, port: int = 5432):
-        """
-        Конструктор класса для управления соединением с БД.
-        """
-        self.conn = psycopg2.connect(
-            dbname=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            options='-c client_encoding=UTF8'
-        )
+    def __init__(self):
+        params = config()
+        self.conn = psycopg2.connect(**params)
+        self.conn.autocommit = True
 
-        self.cur = self.conn.cursor()
-        print("Соединение успешно установлено.")
+    def get_companies_and_vacancies_count(self):
+        """Список всех компаний и количество вакансий у каждой"""
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.name, COUNT(v.id)
+                FROM companies c
+                LEFT JOIN vacancies v ON c.id = v.company_id
+                GROUP BY c.name;
+            """)
+            return cur.fetchall()
 
-    def get_companies_and_vacancies_count(self) -> List[Tuple]:
-        """Возвращает список всех компаний и количество вакансий у каждой компании."""
-        self.cur.execute("""
-            SELECT company_name, COUNT(*) AS vacancies_count
-            FROM employers JOIN vacancies USING (employer_id)
-            GROUP BY company_id;
-        """)
-        return self.cur.fetchall()
+    def get_all_vacancies(self):
+        """Все вакансии: компания, вакансия, зарплата, ссылка"""
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.name, v.title, v.salary_from, v.url
+                FROM vacancies v
+                JOIN companies c ON v.company_id = c.id;
+            """)
+            return cur.fetchall()
 
-    def get_all_vacancies(self) -> List[Tuple]:
-        """Возвращает список всех вакансий с названием компании, названием вакансии, зарплатой и ссылкой на вакансию."""
-        self.cur.execute("""
-            SELECT company_name, title, CONCAT(salary_from, '-', salary_to) AS salary_range, link_vacancy
-            FROM employers JOIN vacancies USING (employer_id);
-        """)
-        return self.cur.fetchall()
+    def get_avg_salary(self):
+        """Средняя зарплата по всем вакансиям"""
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT AVG(salary_from) FROM vacancies WHERE salary_from IS NOT NULL;")
+            return cur.fetchone()[0]
 
-    def get_avg_salary(self) -> float:
-        """Возвращает среднюю зарплату по всем вакансиям."""
-        self.cur.execute("""
-            SELECT AVG((salary_from + salary_to)/2) 
-            FROM vacancies 
-            WHERE salary_from IS NOT NULL AND salary_to IS NOT NULL;
-        """)
-        result = self.cur.fetchone()[0]
-        return round(result, 2) if result is not None else 0
+    def get_vacancies_with_higher_salary(self):
+        """Вакансии с зарплатой выше средней"""
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.name, v.title, v.salary_from, v.url
+                FROM vacancies v
+                JOIN companies c ON v.company_id = c.id
+                WHERE v.salary_from > (SELECT AVG(salary_from) FROM vacancies WHERE salary_from IS NOT NULL);
+            """)
+            return cur.fetchall()
 
-    def get_vacancies_with_higher_salary(self) -> List[Tuple]:
-        """Возвращает список вакансий с зарплатой выше средней."""
-        avg_salary = self.get_avg_salary()
-        self.cur.execute(f"""
-            SELECT * 
-            FROM vacancies 
-            WHERE ((salary_from + salary_to)/2 > %s) OR (salary_from > %s);
-        """, (avg_salary, avg_salary))
-        return self.cur.fetchall()
+    def get_vacancies_with_keyword(self, keyword: str):
+        """Вакансии, где в названии есть слово (например Python)"""
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.name, v.title, v.salary_from, v.url
+                FROM vacancies v
+                JOIN companies c ON v.company_id = c.id
+                WHERE v.title ILIKE %s;
+            """, (f"%{keyword}%",))
+            return cur.fetchall()
 
-    def get_vacancies_with_keyword(self, keyword: str) -> List[Tuple]:
-        """Возвращает список вакансий, содержащих указанное ключевое слово в названии."""
-        self.cur.execute(f"""
-            SELECT * 
-            FROM vacancies 
-            WHERE LOWER(title) LIKE %s;
-        """, ('%' + keyword.lower() + '%',))
-        return self.cur.fetchall()
-
+    def close(self):
+        self.conn.close()

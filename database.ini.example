@@ -1,5 +1,6 @@
 [postgresql]
-   user=your_username
-   password=your_password
-   host=localhost
-   port=5432
+   DB_NAME = companies_vacancy
+   DB_USER = your_username
+   DB_PORT = 5432
+   DB_HOST = localhost
+   DB_PASSWORD = your_password

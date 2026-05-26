@@ -1,70 +1,107 @@
+from src.database import create_database_if_not_exists, create_tables, populate_database, add_employee, add_vacancy, get_employees, get_vacancies
+from src.api import APIManager
 from src.db_manager import DBManager
-from src.utils import get_companies_info, create_database, save_data_to_database
-from config import get_config
 
-
-
-def main():
-
-    params = get_config()
-
-    create_database('companies_vacancy', **params)
-
-    db_manager = DBManager(database="companies_vacancy", **params)
-    companies = ['Яндекс', 'Сбербанк', 'VK', 'Газпром Нефть', 'Роснефть', 'Ростелеком', 'Mail.Ru Group', 'Wildberries',
-                 'Аэрофлот', 'Rambler&Co']
-    data = get_companies_info(companies)
-    save_data_to_database(data, **params)
-
-
-
-
+def data_menu():
     while True:
-        print('Добро пожаловать в систему вакансий!\n')
+        print("\nМеню работы с данными:")
+        print("1. Добавить компанию")
+        print("2. Добавить вакансию")
+        print("3. Показать все компании")
+        print("4. Показать все вакансии")
+        print("5. Вернуться в главное меню")
 
-        print("Выберите пункт меню:\n"
-              "1. Получить список всех компаний и количество вакансий у каждой компании.\n"
-              "2. Получить список всех вакансий с указанием названия компании, названия вакансии и зарплаты и ссылки на вакансию"
-              "3. Узнать среднюю зарплату по всем вакансиям\n"
-              "4. Получить список вакансий с зарплатой выше среднего уровня\n"
-              "5. Поиск вакансий по ключевому слову\n"
-              "6. Выйти")
+        choice = input("Введите номер действия: ")
 
-        menu_item = input('Введите пункт меню: ')
+        if choice == "1":
+            name = input("Название компании: ")
+            add_employee(name)
+            print("Компания добавлена!")
 
+        elif choice == "2":
+            title = input("Название вакансии: ")
+            salary = int(input("Зарплата: "))
+            companies = get_employees()
+            if not companies:
+                print("Компаний нет. Сначала добавьте компанию.")
+                continue
+            print("\nВыберите компанию для вакансии:")
+            for c in companies:
+                print(f"{c[0]}. {c[1]}")
+            company_id = int(input("ID компании: "))
+            add_vacancy(title, salary, company_id)
+            print("Вакансия добавлена!")
 
-        if menu_item == '1':
-            #список всех компаний и количество вакансий у каждой компании
-            companies_and_counts = db_manager.get_companies_and_vacancies_count()
-            print(companies_and_counts)
+        elif choice == "3":
+            companies = get_employees()
+            if companies:
+                print("\nКомпании:")
+                for c in companies:
+                    print(f"ID: {c[0]}, Название: {c[1]}")
+            else:
+                print("Компаний нет.")
 
-        elif menu_item == '2':
-            #список всех вакансий с указанием названия компании, названия вакансии и зарплаты и ссылки на вакансию
-            vacancies_and_companies = db_manager.get_all_vacancies()
-            print(vacancies_and_companies)
+        elif choice == "4":
+            vacancies = get_vacancies()
+            if vacancies:
+                print("\nВакансии:")
+                for v in vacancies:
+                    print(f"ID: {v[0]}, Название: {v[1]}, Зарплата: {v[2]}, Компания: {v[3]}")
+            else:
+                print("Вакансий нет.")
 
-        elif menu_item == '3':
-            # Средняя зарплата по всем вакансиям
-            average_salary = db_manager.get_avg_salary()
-            print(f"Средняя зарплата: {average_salary}")
-
-        elif menu_item == '4':
-            # Вакансии с зарплатой выше среднего уровня
-            higher_salary_vacancies = db_manager.get_vacancies_with_higher_salary()
-            print(higher_salary_vacancies)
-
-        elif menu_item == '5':
-            # Поиск вакансий по ключевому слову
-            keyword = input("Введите ключевое слово: ")
-            python_vacancies = db_manager.get_vacancies_with_keyword(keyword)
-            print(python_vacancies)
-
-        elif menu_item == '6':
-            # Выход из программы
-            print("Выход из программы")
-            db_manager.close()
+        elif choice == "5":
             break
         else:
-            print("Несуществующий пункт меню. Введите пункт меню из списка.")
-if __name__ == '__main__':
+            print("Неверный номер. Попробуйте снова.")
+
+def main():
+    print("Добро пожаловать в систему вакансий!\n")
+    create_database_if_not_exists()
+
+    while True:
+        print("\nВыберите действие:")
+        print("1. Создать таблицы и загрузить тестовые данные")
+        print("2. Работа с данными")
+        print("3. Вывести статистику (DBManager)")
+        print("4. Получить компании и вакансии с hh.ru (APIManager)")
+        print("5. Выйти")
+
+        user_choice = input("Введите номер действия: ")
+
+        if user_choice == "1":
+            create_tables()
+            populate_database()
+            print("База и таблицы созданы, данные загружены.")
+        elif user_choice == "2":
+            data_menu()
+        elif user_choice == "3":
+            db = DBManager()
+            print("\nКомпании и количество вакансий:")
+            for row in db.get_companies_and_vacancies_count():
+                print(row)
+            print("\nВсе вакансии:")
+            for row in db.get_all_vacancies():
+                print(row)
+            print("\nСредняя зарплата по всем вакансиям:")
+            print(db.get_avg_salary())
+            db.close()
+        elif user_choice == "4":
+            ids = input("Введите ID компаний через запятую: ")
+            ids_list = [int(i.strip()) for i in ids.split(",") if i.strip().isdigit()]
+            companies = APIManager.get_companies(ids_list)
+            print(companies)
+            if ids_list:
+                for company_id in ids_list:
+                    vacancies = APIManager.get_vacancies(company_id)
+                    print(f"Вакансии компании {company_id}:")
+                    for v in vacancies:
+                        print(v)
+        elif user_choice == "5":
+            print("Выход из программы")
+            break
+        else:
+            print("Неверный номер. Введите снова.")
+
+if __name__ == "__main__":
     main()
