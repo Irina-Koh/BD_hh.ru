@@ -1,0 +1,6 @@
+[postgresql]
+DBNAME = companies_vacancy
+USER = your_username
+PORT = 5432
+HOST = localhost
+PASSWORD = your_password

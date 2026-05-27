@@ -5,12 +5,24 @@ description = ""
 authors = [
     {name = "Irina Koh",email = "arina2009.91@mail.ru"}
 ]
+package-mode = "none"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "requests (>=2.32.5,<3.0.0)",
+    "psycopg2 (>=2.9.11,<3.0.0)",
+    "dotenv (>=0.9.9,<0.10.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "^7.3.0"
+mypy = "^1.19.1"
+black = "^26.3.1"
+isort = "^8.0.1"
+
