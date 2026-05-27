@@ -1,6 +1,14 @@
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from config import DB_NAME, DB_USER, DB_PORT, DB_HOST, DB_PASSWORD
+from config import config
+
+param = config()
+
+DB_NAME = param.get("dbname")
+DB_USER = param.get("user")
+DB_PORT = param.get("port")
+DB_HOST = param.get("host")
+DB_PASSWORD = param.get("password")
 
 
 def create_database_if_not_exists():
@@ -60,11 +68,11 @@ def create_tables():
         with conn.cursor() as cur:
             # Удаляем старые таблицы
             cur.execute("DROP TABLE IF EXISTS vacancies CASCADE;")
-            cur.execute("DROP TABLE IF EXISTS employees CASCADE;")
+            cur.execute("DROP TABLE IF EXISTS companies CASCADE;")
 
             # Создаем таблицу компаний
             cur.execute("""
-                CREATE TABLE employees (
+                CREATE TABLE companies (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(255) NOT NULL
                 )
@@ -76,28 +84,30 @@ def create_tables():
                     id SERIAL PRIMARY KEY,
                     title VARCHAR(255) NOT NULL,
                     salary INTEGER,
-                    company_id INT REFERENCES employees(id)
+                    link TEXT,
+                    company_id INT REFERENCES companies(id)
+                    
                 )
             """)
     print("Таблицы созданы")
 
 
-def add_employee(name: str):
+def add_companies(name: str):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO employees (name) VALUES (%s)",
+                "INSERT INTO companies (name) VALUES (%s)",
                 (name,)
             )
             conn.commit()
 
 
-def add_vacancy(title: str, salary: int, company_id: int):
+def add_vacancy(title: str, salary: int, link: str, company_id: int):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO vacancies (title, salary, company_id) VALUES (%s, %s, %s)",
-                (title, salary, company_id)
+                "INSERT INTO vacancies (title, salary, link, company_id) VALUES (%s, %s, %s, %s)",
+                (title, salary, link, company_id)
             )
             conn.commit()
 
@@ -105,7 +115,7 @@ def add_vacancy(title: str, salary: int, company_id: int):
 def get_employees():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM employees")
+            cur.execute("SELECT * FROM companies")
             return cur.fetchall()
 
 
@@ -116,7 +126,7 @@ def get_vacancies():
                 cur.execute("""
                     SELECT v.id, v.title, v.salary, e.name AS company
                     FROM vacancies v
-                    JOIN employees e ON v.company_id = e.id
+                    JOIN companies e ON v.company_id = e.id
                 """)
                 return cur.fetchall()
     except Exception as e:
@@ -127,10 +137,10 @@ def get_vacancies():
 def populate_database():
     # Добавляем 10 компаний
     for i in range(1, 11):
-        add_employee(f"Компания {i}")
+        add_companies(f"Компания {i}")
 
     # Добавляем 10 вакансий для каждой компании
     for i in range(1, 11):
-        add_vacancy(f"Вакансия {i}", 50000 + i*1000, i)
+        add_vacancy(f"Вакансия {i}", 50000 + i*1000, f"https://job-site.com/v-{i}",  i)
 
     print("База данных заполнена 10 компаниями и 10 вакансиями")

@@ -1,4 +1,4 @@
-from src.database import create_database_if_not_exists, create_tables, populate_database, add_employee, add_vacancy, get_employees, get_vacancies
+from src.database import create_database_if_not_exists, create_tables, populate_database, add_companies, add_vacancy, get_employees, get_vacancies
 from src.api import APIManager
 from src.db_manager import DBManager
 
@@ -15,7 +15,7 @@ def data_menu():
 
         if choice == "1":
             name = input("Название компании: ")
-            add_employee(name)
+            add_companies(name)
             print("Компания добавлена!")
 
         elif choice == "2":

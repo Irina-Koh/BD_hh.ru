@@ -1,4 +1,4 @@
-from src.database import add_employee, add_vacancy, get_employees, get_vacancies
+from src.database import add_companies, add_vacancy, get_employees, get_vacancies
 
 
 def data_menu():
@@ -14,7 +14,7 @@ def data_menu():
 
         if choice == "1":
             name = input("Введите название компании: ")
-            add_employee(name)
+            add_companies(name)
 
         elif choice == "2":
             title = input("Введите название вакансии: ")

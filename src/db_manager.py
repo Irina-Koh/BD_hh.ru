@@ -25,7 +25,7 @@ class DBManager:
         """Все вакансии: компания, вакансия, зарплата, ссылка"""
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT c.name, v.title, v.salary_from, v.url
+                SELECT c.name, v.title, v.salary, v.link
                 FROM vacancies v
                 JOIN companies c ON v.company_id = c.id;
             """)
@@ -34,17 +34,17 @@ class DBManager:
     def get_avg_salary(self):
         """Средняя зарплата по всем вакансиям"""
         with self.conn.cursor() as cur:
-            cur.execute("SELECT AVG(salary_from) FROM vacancies WHERE salary_from IS NOT NULL;")
+            cur.execute("SELECT AVG(salary) FROM vacancies WHERE salary IS NOT NULL;")
             return cur.fetchone()[0]
 
     def get_vacancies_with_higher_salary(self):
         """Вакансии с зарплатой выше средней"""
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT c.name, v.title, v.salary_from, v.url
+                SELECT c.name, v.title, v.salary, v.url
                 FROM vacancies v
                 JOIN companies c ON v.company_id = c.id
-                WHERE v.salary_from > (SELECT AVG(salary_from) FROM vacancies WHERE salary_from IS NOT NULL);
+                WHERE v.salary > (SELECT AVG(salary) FROM vacancies WHERE salary IS NOT NULL);
             """)
             return cur.fetchall()
 
@@ -52,7 +52,7 @@ class DBManager:
         """Вакансии, где в названии есть слово (например Python)"""
         with self.conn.cursor() as cur:
             cur.execute("""
-                SELECT c.name, v.title, v.salary_from, v.url
+                SELECT c.name, v.title, v.salary, v.url
                 FROM vacancies v
                 JOIN companies c ON v.company_id = c.id
                 WHERE v.title ILIKE %s;
